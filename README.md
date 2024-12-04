@@ -85,24 +85,44 @@ pip install python-dotenv
 Create a Python script (e.g., `shopify_test.py`) to test the API connection:
 
 ```python
-import shopify
 import os
-from dotenv import load_dotenv
+import shopify
+import logging
 
-# Load environment variables
-load_dotenv()
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-SHOPIFY_API_KEY = os.getenv('SHOPIFY_API_KEY')
-SHOPIFY_PASSWORD = os.getenv('SHOPIFY_PASSWORD')
-SHOPIFY_STORE_URL = os.getenv('SHOPIFY_STORE_URL')
+def setup_environment():
+    """Set up environment configuration for Shopify API."""
+    return {
+        "API_KEY": os.getenv("SHOPIFY_API_KEY"),
+        "API_SECRET": os.getenv("SHOPIFY_API_SECRET"),
+        "SHOP_NAME": os.getenv("SHOPIFY_SHOP_NAME"),
+        "TOKEN": os.getenv("SHOPIFY_ACCESS_TOKEN"),
+        "API_VERSION": "2024-07",
+    }
 
-# Set up the Shopify API session
-shop_url = f"https://{SHOPIFY_API_KEY}:{SHOPIFY_PASSWORD}@{SHOPIFY_STORE_URL}/admin"
-shopify.ShopifyResource.set_site(shop_url)
+def setup_shopify_session(config):
+    """
+    Establish a Shopify session using provided configuration.
+    """
+    try:
+        shop_url = f"https://{config['SHOP_NAME']}.myshopify.com"
+        shopify.Session.setup(api_key=config['API_KEY'], secret=config['API_SECRET'])
+        session = shopify.Session(shop_url, config['API_VERSION'], config['TOKEN'])
+        shopify.ShopifyResource.activate_session(session)
+        logging.info("Shopify session successfully established.")
+    except Exception as e:
+        raise ConnectionError(f"Failed to set up Shopify session: {e}")
 
-# Test the connection
-shop = shopify.Shop.current()
-print(f"Shop name: {shop.name}")
+def main():
+    try:
+        logging.info("Initializing environment configuration...")
+        config = setup_environment()
+
+        logging.info("Setting up Shopify session...")
+        setup_shopify_session(config)
+
 ```
 
 Run the script to ensure everything is working:
